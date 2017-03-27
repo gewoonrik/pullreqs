@@ -298,32 +298,33 @@ Extract data for pull requests for a given repository
   def process_pull_request(pr, lang)
 
     # Statistics across pull request commits
-    stats = pr_stats(pr)
-    stats_open = pr_stats(pr, true)
+    #stats = pr_stats(pr)
+    #stats_open = pr_stats(pr, true)
 
     # Test diff stats
-    pr_commits = commit_entries(pr[:id], true).sort{|a,b| a['commit']['author']['date'] <=> b['commit']['author']['date']}
-    test_diff_open = test_diff_stats(pr[:base_commit], pr_commits.last[:sha])
+    #pr_commits = commit_entries(pr[:id], true).sort{|a,b| a['commit']['author']['date'] <=> b['commit']['author']['date']}
+    #test_diff_open = test_diff_stats(pr[:base_commit], pr_commits.last[:sha])
 
-    pr_commits = commit_entries(pr[:id], false).sort{|a,b| a['commit']['author']['date'] <=> b['commit']['author']['date']}
-    test_diff = test_diff_stats(pr[:base_commit], pr_commits.last[:sha])
+    #pr_commits = commit_entries(pr[:id], false).sort{|a,b| a['commit']['author']['date'] <=> b['commit']['author']['date']}
+    #test_diff = test_diff_stats(pr[:base_commit], pr_commits.last[:sha])
 
     # Count number of src/comment lines
-    src = src_lines(pr[:base_commit])
+    #src = src_lines(pr[:base_commit])
 
-    if src == 0 then raise StandardError.new("Bad src lines: 0, pr: #{pr[:github_id]}, id: #{pr[:id]}") end
+    #if src == 0 then raise StandardError.new("Bad src lines: 0, pr: #{pr[:github_id]}, id: #{pr[:id]}") end
 
-    months_back = 3
-    commits_incl_prs = commits_last_x_months(pr, false, months_back)
-    commits_incl_prs = 1 if commits_incl_prs == 0 # To avoid divsions by zero below
+    #months_back = 3
+    #commits_incl_prs = commits_last_x_months(pr, false, months_back)
+    #commits_incl_prs = 1 if commits_incl_prs == 0 # To avoid divsions by zero below
 
-    prev_pull_reqs = prev_pull_requests(pr,'opened')
+    #prev_pull_reqs = prev_pull_requests(pr,'opened')
 
     # Create line for a pull request
     {
         # General stuff
         :pull_req_id              => pr[:id],
         :project_name             => "#{pr[:login]}/#{pr[:project_name]}",
+        :url                      => "http://www.github.com/#{pr[:login]}/#{pr[:project_name]}/pull/#{pr[:id]}",
         :lang                     => lang,
         :github_id                => pr[:github_id],
 
@@ -331,80 +332,80 @@ Extract data for pull requests for a given repository
         :created_at               => Time.at(pr[:created_at]).to_i,
         :merged_at                => merge_ts(pr),
         :closed_at                => Time.at(pr[:closed_at]).to_i,
-        :lifetime_minutes         => pr[:lifetime_minutes],
-        :mergetime_minutes        => merge_time_minutes(pr),
+        # :lifetime_minutes         => pr[:lifetime_minutes],
+        # :mergetime_minutes        => merge_time_minutes(pr),
         :merged_using             => close_reason[pr[:github_id]],
-        :conflict                 => conflict?(pr),
-        :forward_links            => forward_links?(pr),
-        :intra_branch             => if intra_branch?(pr) == 1 then true else false end,
-        :description_length       => description_length(pr),
-        :num_commits              => num_commits(pr),
-        :num_commits_open         => num_commits_at_open(pr),
-        :num_pr_comments          => num_pr_comments(pr),
-        :num_issue_comments       => num_issue_comments(pr),
-        :num_commit_comments      => num_commit_comments(pr),
-        :num_comments             => num_pr_comments(pr) + num_issue_comments(pr) + num_commit_comments(pr),
-        :num_commit_comments_open => num_commit_comments(pr, true),
-        :num_participants         => num_participants(pr),
-        :files_added_open         => stats_open[:files_added],
-        :files_deleted_open       => stats_open[:files_removed],
-        :files_modified_open      => stats_open[:files_modified],
-        :files_changed_open       => stats_open[:files_added] + stats[:files_modified] + stats[:files_removed],
-        :src_files_open           => stats_open[:src_files],
-        :doc_files_open           => stats_open[:doc_files],
-        :other_files_open         => stats_open[:other_files],
-        :files_added              => stats[:files_added],
-        :files_deleted            => stats[:files_removed],
-        :files_modified           => stats[:files_modified],
-        :files_changed            => stats[:files_added] + stats[:files_modified] + stats[:files_removed],
-        :src_files                => stats[:src_files],
-        :doc_files                => stats[:doc_files],
-        :other_files              => stats[:other_files],
-        :src_churn_open           => stats_open[:lines_added] + stats_open[:lines_deleted],
-        :test_churn_open          => stats_open[:test_lines_added] + stats_open[:test_lines_deleted],
-        :tests_added_open         => test_diff_open[:tests_added],
-        :tests_deleted_open       => test_diff_open[:tests_deleted],
-        :tests_added              => test_diff[:tests_added],
-        :tests_deleted            => test_diff[:tests_deleted],
-        :src_churn                => stats[:lines_added] + stats[:lines_deleted],
-        :test_churn               => stats[:test_lines_added] + stats[:test_lines_deleted],
-        :new_entropy              => new_entropy(pr),
-        :entropy_diff             => (new_entropy(pr) / project_entropy(pr)) * 100,
-        :commits_on_files_touched => commits_on_files_touched(pr, months_back),
-        :commits_to_hottest_file  => commits_to_hottest_file(pr, months_back),
-        :hotness                  => hotness(pr, months_back),
-        :at_mentions_description  => at_mentions_description(pr),
-        :at_mentions_comments     => at_mentions_comments(pr),
-
-        # Project characteristics
-        :perc_external_contribs   => commits_last_x_months(pr, true, months_back).to_f / commits_incl_prs.to_f,
-        :sloc                     => src,
-        :test_lines               => test_lines(pr[:base_commit]),
-        :test_cases               => num_test_cases(pr[:base_commit]),
-        :asserts                  => num_assertions(pr[:base_commit]),
-        :stars                    => stars(pr),
-        :team_size                => team_size(pr, months_back),
-        :workload                 => workload(pr),
-        :ci                       => ci(pr),
-
-        # Contributor characteristics
-        :requester                => requester(pr),
-        :closer                   => closer(pr),
-        :merger                   => merger(pr),
-        :prev_pullreqs            => prev_pull_reqs,
-        :requester_succ_rate      => if prev_pull_reqs > 0 then prev_pull_requests(pr, 'merged').to_f / prev_pull_reqs.to_f else 0 end,
-        :followers                => followers(pr),
-        :main_team_member         => main_team_member?(pr, months_back),
-        :social_connection        => social_connection?(pr),
-
-        # Project/contributor interaction characteristics
-        :prior_interaction_issue_events    => prior_interaction_issue_events(pr, months_back),
-        :prior_interaction_issue_comments  => prior_interaction_issue_comments(pr, months_back),
-        :prior_interaction_pr_events       => prior_interaction_pr_events(pr, months_back),
-        :prior_interaction_pr_comments     => prior_interaction_pr_comments(pr, months_back),
-        :prior_interaction_commits         => prior_interaction_commits(pr, months_back),
-        :prior_interaction_commit_comments => prior_interaction_commit_comments(pr, months_back),
-        :first_response                    => first_response(pr)
+        # :conflict                 => conflict?(pr),
+        :pullreq_link            => pullreq_links?(pr),
+        # :intra_branch             => if intra_branch?(pr) == 1 then true else false end,
+        # :description_length       => description_length(pr),
+        # :num_commits              => num_commits(pr),
+        # :num_commits_open         => num_commits_at_open(pr),
+        # :num_pr_comments          => num_pr_comments(pr),
+        # :num_issue_comments       => num_issue_comments(pr),
+        # :num_commit_comments      => num_commit_comments(pr),
+        # :num_comments             => num_pr_comments(pr) + num_issue_comments(pr) + num_commit_comments(pr),
+        # :num_commit_comments_open => num_commit_comments(pr, true),
+        # :num_participants         => num_participants(pr),
+        # :files_added_open         => stats_open[:files_added],
+        # :files_deleted_open       => stats_open[:files_removed],
+        # :files_modified_open      => stats_open[:files_modified],
+        # :files_changed_open       => stats_open[:files_added] + stats[:files_modified] + stats[:files_removed],
+        # :src_files_open           => stats_open[:src_files],
+        # :doc_files_open           => stats_open[:doc_files],
+        # :other_files_open         => stats_open[:other_files],
+        # :files_added              => stats[:files_added],
+        # :files_deleted            => stats[:files_removed],
+        # :files_modified           => stats[:files_modified],
+        # :files_changed            => stats[:files_added] + stats[:files_modified] + stats[:files_removed],
+        # :src_files                => stats[:src_files],
+        # :doc_files                => stats[:doc_files],
+        # :other_files              => stats[:other_files],
+        # :src_churn_open           => stats_open[:lines_added] + stats_open[:lines_deleted],
+        # :test_churn_open          => stats_open[:test_lines_added] + stats_open[:test_lines_deleted],
+        # :tests_added_open         => test_diff_open[:tests_added],
+        # :tests_deleted_open       => test_diff_open[:tests_deleted],
+        # :tests_added              => test_diff[:tests_added],
+        # :tests_deleted            => test_diff[:tests_deleted],
+        # :src_churn                => stats[:lines_added] + stats[:lines_deleted],
+        # :test_churn               => stats[:test_lines_added] + stats[:test_lines_deleted],
+        # :new_entropy              => new_entropy(pr),
+        # :entropy_diff             => (new_entropy(pr) / project_entropy(pr)) * 100,
+        # :commits_on_files_touched => commits_on_files_touched(pr, months_back),
+        # :commits_to_hottest_file  => commits_to_hottest_file(pr, months_back),
+        # :hotness                  => hotness(pr, months_back),
+        # :at_mentions_description  => at_mentions_description(pr),
+        # :at_mentions_comments     => at_mentions_comments(pr),
+        #
+        # # Project characteristics
+        # :perc_external_contribs   => commits_last_x_months(pr, true, months_back).to_f / commits_incl_prs.to_f,
+        # :sloc                     => src,
+        # :test_lines               => test_lines(pr[:base_commit]),
+        # :test_cases               => num_test_cases(pr[:base_commit]),
+        # :asserts                  => num_assertions(pr[:base_commit]),
+        # :stars                    => stars(pr),
+        # :team_size                => team_size(pr, months_back),
+        # :workload                 => workload(pr),
+        # :ci                       => ci(pr),
+        #
+        # # Contributor characteristics
+        # :requester                => requester(pr),
+        # :closer                   => closer(pr),
+        # :merger                   => merger(pr),
+        # :prev_pullreqs            => prev_pull_reqs,
+        # :requester_succ_rate      => if prev_pull_reqs > 0 then prev_pull_requests(pr, 'merged').to_f / prev_pull_reqs.to_f else 0 end,
+        # :followers                => followers(pr),
+        # :main_team_member         => main_team_member?(pr, months_back),
+        # :social_connection        => social_connection?(pr),
+        #
+        # # Project/contributor interaction characteristics
+        # :prior_interaction_issue_events    => prior_interaction_issue_events(pr, months_back),
+        # :prior_interaction_issue_comments  => prior_interaction_issue_comments(pr, months_back),
+        # :prior_interaction_pr_events       => prior_interaction_pr_events(pr, months_back),
+        # :prior_interaction_pr_comments     => prior_interaction_pr_comments(pr, months_back),
+        # :prior_interaction_commits         => prior_interaction_commits(pr, months_back),
+        # :prior_interaction_commit_comments => prior_interaction_commit_comments(pr, months_back),
+        # :first_response                    => first_response(pr)
     }
   end
 
@@ -509,28 +510,48 @@ Extract data for pull requests for a given repository
     end
   end
 
-  def forward_links?(pr)
+  def pullreq_links?(pr)
     owner = pr[:login]
     repo = pr[:project_name]
     pr_id = pr[:github_id]
     issue_comments(owner, repo, pr_id).reduce(false) do |acc, x|
       # Try to find pull_requests numbers referenced in each comment
       a = x['body'].scan(/\#([0-9]+)/m).reduce(false) do |acc1, m|
-        if m[0].to_i > pr_id.to_i
-          # See if it is a pull request (if not the number is an issue)
-          q = <<-QUERY
-            select *
-            from pull_requests pr, projects p, users u
-            where u.id = p.owner_id
-              and pr.base_repo_id = p.id
-              and u.login = ?
-              and p.name = ?
-              and pr.pullreq_id = ?
-          QUERY
-          acc1 || db.fetch(q, owner, repo, m[0]).all.size > 0
-        else
-          acc1
-        end
+        # See if it is a pull request (if not the number is an issue)
+        q = <<-QUERY
+          select *
+          from pull_requests pr, projects p, users u
+          where u.id = p.owner_id
+            and pr.base_repo_id = p.id
+            and u.login = ?
+            and p.name = ?
+            and pr.pullreq_id = ?
+        QUERY
+        acc1 || db.fetch(q, owner, repo, m[0]).all.size > 0
+      end
+      acc || a
+    end
+  end
+
+  def duplicate?(pr)
+    duplicate_keywords = ["duplicate", "obsolete", "alternative","conflict"]
+    owner = pr[:login]
+    repo = pr[:project_name]
+    pr_id = pr[:github_id]
+    issue_comments(owner, repo, pr_id).reduce(false) do |acc, x|
+      # Try to find pull_requests numbers referenced in each comment
+      a = x['body'].scan(/\#([0-9]+)/m).reduce(false) do |acc1, m|
+        # See if it is a pull request (if not the number is an issue)
+        q = <<-QUERY
+          select *
+          from pull_requests pr, projects p, users u
+          where u.id = p.owner_id
+            and pr.base_repo_id = p.id
+            and u.login = ?
+            and p.name = ?
+            and pr.pullreq_id = ?
+        QUERY
+        acc1 || db.fetch(q, owner, repo, m[0]).all.size > 0
       end
       acc || a
     end
