@@ -138,11 +138,7 @@ Extract data for pull requests for a given repository
   # Main command code
   def go
     interrupted = false
-
-    trap('INT') {
-      log "#{File.basename($0)}(#{Process.pid}): Received SIGINT, exiting"
-      interrupted = true
-    }
+    
 
     self.owner = ARGV[0]
     self.repo = ARGV[1]
